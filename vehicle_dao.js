@@ -8,7 +8,7 @@ const createVehicle = function (row) {
     //const importantTask = (row.important === 1) ? true : false;
    // const privateTask = (row.private === 1) ? true : false;
     //const completedTask = (row.completed === 1) ? true : false;
-    return new Vehicle(row.rid, row.category , row.brand , row.model,row.max_km , row.extra_driver);
+    return new Vehicle(row.rid, row.category , row.brand , row.model,row.max_km , row.extra_driver , row.size);
 }
 
 /*
@@ -68,6 +68,20 @@ exports.getVehicles = function() {
     });
 }
 
+exports.getbrands = function() {
+    return new Promise((resolve, reject) => {
+        const sql = "SELECT distinct brand from Vehicle";
+        db.all(sql, [], (err, rows) => {
+            if (err) {
+                reject(err);
+            } else {
+                let brands = rows;
+                resolve(brands);
+            }
+        });
+    });
+}
+
 /**
  * Get a task with given 
  */
@@ -90,3 +104,94 @@ exports.getVehiclesWithFilter= function(startDate , endDate , category , estimKm
     });
 }
 
+
+exports.getFiltered= function(category , brand ) {
+    return new Promise((resolve, reject) => {
+
+        console.log("getFiltered started");
+
+        let sql = "SELECT * FROM Vehicle WHERE " ;
+        if (category.length>0) {
+            sql += "category IN (";
+
+            category.map(() => sql += '? ,');
+
+            sql=sql.replace(/.$/ , ' ');
+            sql += ') ';
+            console.log("selected in category");
+
+
+        }
+        if ( category.length>0 &&  brand.length>0) {
+            sql += " and ";
+            console.log("selected in and brand");
+        }
+
+        if (brand.length > 0) {
+            sql += "brand IN ( ";
+            brand.map(() => sql += '? ,');
+            sql=sql.replace(/.$/ , ' ');
+            sql += ' )';
+            console.log(" brand :"+ brand.length);
+
+        }
+        if(!(category.length>0 &&  brand.length>0)){
+            sql.replace("WHERE" , " ");
+            console.log("not selected in and brand");
+        }
+        console.log(sql);
+        if (category.length>0 &&  brand.length>0) {
+
+            db.all(sql, [...category, ...brand], (err, rows) => {
+                if (err)
+                    reject(err);
+                else if (rows.length === 0)
+                    resolve(undefined);
+                else {
+                    let vehicles = rows.map((row) => createVehicle(row));
+                    resolve(vehicles);
+                }
+            });
+        } else if (category.length>0) {
+            db.all(sql, [...category], (err, rows) => {
+                if (err)
+                    reject(err);
+                else if (rows.length === 0)
+                    resolve(undefined);
+                else {
+                    let vehicles = rows.map((row) => createVehicle(row));
+                    resolve(vehicles);
+                }
+            });
+
+        } else if (  brand.length>0) {
+            db.all(sql, [...brand], (err, rows) => {
+                if (err)
+                    reject(err);
+                else if (rows.length === 0)
+                    resolve(undefined);
+                else {
+                    let vehicles = rows.map((row) => createVehicle(row));
+                    resolve(vehicles);
+                }
+            });
+
+        }
+
+        else if (!( category.length>0 && brand.length>0)) {
+            db.all(sql, [], (err, rows) => {
+                if (err)
+                    reject(err);
+                else if (rows.length === 0)
+                    resolve(undefined);
+                else {
+                    let vehicles = rows.map((row) => createVehicle(row));
+                    resolve(vehicles);
+                }
+            });
+
+        }
+    });
+
+
+}
